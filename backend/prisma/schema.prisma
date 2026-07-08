@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Usada en runtime por el backend (conexión via pooler/PgBouncer de Supabase)
+  url       = env("DATABASE_URL")
+  // Usada solo por Prisma Migrate (conexión directa, sin pooler)
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum RolAdmin {
+  admin
+}
+
+enum Region {
+  Lima
+  Norte
+  Sur
+  Centro
+}
+
+enum TipoEmpresa {
+  TECPORT
+  Cliente
+  Partner
+  Logistica
+  Portuaria
+  Otra
+}
+
+enum NivelOperador {
+  Principiante
+  Intermedio
+  Avanzado
+  Maestro
+}
+
+enum EstadoCertificacion {
+  vigente
+  por_vencer
+  vencido
+  inactivo
+}
+
+// ---------------------------------------------------------------------------
+// Modelos
+// ---------------------------------------------------------------------------
+
+// Complementa al usuario creado en Supabase Auth. No guarda contraseñas.
+model AdminProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  authUserId  String   @unique @map("auth_user_id") @db.Uuid
+  nombre      String
+  rol         RolAdmin @default(admin)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_profiles")
+}
+
+model Empresa {
+  id          String      @id @default(uuid()) @db.Uuid
+  nombre      String
+  ruc         String?
+  tipoEmpresa TipoEmpresa @map("tipo_empresa")
+  region      Region
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  operadores  Operador[]
+
+  @@index([region])
+  @@index([tipoEmpresa])
+  @@map("empresas")
+}
+
+model Equipo {
+  id            String          @id @default(uuid()) @db.Uuid
+  nombre        String          @unique
+  descripcion   String?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  certificaciones Certificacion[]
+
+  @@map("equipos")
+}
+
+model Operador {
+  id                String        @id @default(uuid()) @db.Uuid
+  codigoOperador    String        @unique @map("codigo_operador")
+  nombreCompleto    String        @map("nombre_completo")
+  dni               String        @unique @db.VarChar(8)
+  fechaNacimiento   DateTime?     @map("fecha_nacimiento") @db.Date
+  celular           String?
+  correo            String?
+  linkedin          String?
+  region            Region
+  empresaId         String        @map("empresa_id") @db.Uuid
+  nivel             NivelOperador
+  activo            Boolean       @default(true)
+  motivoInactivo    String?       @map("motivo_inactivo")
+  fechaInactivacion DateTime?     @map("fecha_inactivacion")
+  observaciones     String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  empresa           Empresa         @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  certificaciones   Certificacion[]
+
+  @@index([empresaId])
+  @@index([region])
+  @@index([activo])
+  @@index([nivel])
+  @@map("operadores")
+}
+
+// Registro administrativo de una certificación existente. No emite certificados.
+model Certificacion {
+  id                  String              @id @default(uuid()) @db.Uuid
+  operadorId          String              @map("operador_id") @db.Uuid
+  equipoId            String              @map("equipo_id") @db.Uuid
+  nombreCertificacion String              @map("nombre_certificacion")
+  entidadEmisora      String              @map("entidad_emisora")
+  fechaEmision        DateTime?           @map("fecha_emision") @db.Date
+  fechaVencimiento    DateTime            @map("fecha_vencimiento") @db.Date
+  estado              EstadoCertificacion @default(vigente)
+  archivoUrl          String?             @map("archivo_url")
+  observaciones       String?
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  operador            Operador @relation(fields: [operadorId], references: [id], onDelete: Restrict)
+  equipo              Equipo   @relation(fields: [equipoId], references: [id], onDelete: Restrict)
+
+  @@index([operadorId])
+  @@index([equipoId])
+  @@index([estado])
+  @@index([fechaVencimiento])
+  @@map("certificaciones")
+}
