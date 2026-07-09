@@ -144,19 +144,25 @@ function EditarOperadorPage() {
           <SeccionTitulo>Datos laborales</SeccionTitulo>
           <Grid container rowSpacing={2.5} columnSpacing={4}>
             <Grid item xs={12} md={6}>
-              <FormField
-                select
-                label="Región"
-                {...register('region')}
-                error={Boolean(errors.region)}
-                helperText={errors.region?.message}
-              >
-                {REGIONES.map((r) => (
-                  <MenuItem key={r} value={r}>
-                    {r}
-                  </MenuItem>
-                ))}
-              </FormField>
+              <Controller
+                name="region"
+                control={control}
+                render={({ field }) => (
+                  <FormField
+                    select
+                    label="Región"
+                    {...field}
+                    error={Boolean(errors.region)}
+                    helperText={errors.region?.message}
+                  >
+                    {REGIONES.map((r) => (
+                      <MenuItem key={r} value={r}>
+                        {r}
+                      </MenuItem>
+                    ))}
+                  </FormField>
+                )}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <Controller
@@ -177,19 +183,25 @@ function EditarOperadorPage() {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormField
-                select
-                label="Nivel"
-                {...register('nivel')}
-                error={Boolean(errors.nivel)}
-                helperText={errors.nivel?.message}
-              >
-                {NIVELES.map((nivel) => (
-                  <MenuItem key={nivel} value={nivel}>
-                    {nivel}
-                  </MenuItem>
-                ))}
-              </FormField>
+              <Controller
+                name="nivel"
+                control={control}
+                render={({ field }) => (
+                  <FormField
+                    select
+                    label="Nivel"
+                    {...field}
+                    error={Boolean(errors.nivel)}
+                    helperText={errors.nivel?.message}
+                  >
+                    {NIVELES.map((nivel) => (
+                      <MenuItem key={nivel} value={nivel}>
+                        {nivel}
+                      </MenuItem>
+                    ))}
+                  </FormField>
+                )}
+              />
             </Grid>
             <Grid item xs={12}>
               <FormField label="Observaciones" multiline rows={2} {...register('observaciones')} />
