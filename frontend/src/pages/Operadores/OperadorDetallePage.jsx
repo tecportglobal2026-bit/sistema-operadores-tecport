@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
@@ -44,25 +43,21 @@ function DatoFila({ label, valor }) {
   );
 }
 
-function SeccionCard({ titulo, accion, children }) {
+function Eyebrow({ children, sx }) {
   return (
-    <Card sx={{ height: '100%', p: 3 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1.5,
-          mb: 2,
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight={700} color="text.primary">
-          {titulo}
-        </Typography>
-        {accion}
-      </Box>
+    <Typography
+      sx={{
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'text.secondary',
+        mb: 2,
+        ...sx,
+      }}
+    >
       {children}
-    </Card>
+    </Typography>
   );
 }
 
@@ -217,9 +212,10 @@ function OperadorDetallePage() {
         </Alert>
       )}
 
-      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-        <Grid item xs={12} lg={6}>
-          <SeccionCard titulo="Datos personales">
+      <Card>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
+          <Box sx={{ flex: '1 1 320px', p: 3 }}>
+            <Eyebrow>Datos personales</Eyebrow>
             <DatoFila label="DNI" valor={operador.dni} />
             <DatoFila label="Fecha de nacimiento" valor={formatFecha(operador.fechaNacimiento)} />
             <DatoFila label="Edad" valor={calcularEdad(operador.fechaNacimiento) ?? '—'} />
@@ -237,7 +233,7 @@ function OperadorDetallePage() {
                 )
               }
             />
-            <Box sx={{ py: 1 }}>
+            <Box sx={{ py: 1.1 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 Observaciones
               </Typography>
@@ -245,11 +241,13 @@ function OperadorDetallePage() {
                 {operador.observaciones || '—'}
               </Typography>
             </Box>
-          </SeccionCard>
-        </Grid>
+          </Box>
 
-        <Grid item xs={12} lg={6}>
-          <SeccionCard titulo="Datos laborales">
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+          <Divider sx={{ display: { xs: 'block', md: 'none' }, width: '100%' }} />
+
+          <Box sx={{ flex: '1 1 320px', p: 3 }}>
+            <Eyebrow>Datos laborales</Eyebrow>
             <DatoFila label="Empresa" valor={operador.empresa?.nombre || '—'} />
             <DatoFila label="Región" valor={operador.region} />
             <DatoFila
@@ -265,73 +263,74 @@ function OperadorDetallePage() {
             />
             {!operador.activo && (
               <>
-                <Divider sx={{ my: 1.5 }} />
                 <DatoFila label="Motivo de inactivación" valor={operador.motivoInactivo} />
                 <DatoFila label="Fecha de inactivación" valor={formatFecha(operador.fechaInactivacion)} />
               </>
             )}
-          </SeccionCard>
-        </Grid>
-      </Grid>
-
-      <SeccionCard
-        titulo="Certificaciones"
-        accion={
-          <Button
-            onClick={() => setModalCertAbierto(true)}
-            variant="contained"
-            color="secondary"
-            startIcon={<AddRoundedIcon />}
-          >
-            Agregar certificación
-          </Button>
-        }
-      >
-        {operador.certificaciones.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
-            Este operador no tiene certificaciones registradas.
-          </Typography>
-        ) : (
-          <Box sx={{ overflowX: 'auto', mx: -3 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ pl: 3 }}>Equipo</TableCell>
-                  <TableCell>Certificación</TableCell>
-                  <TableCell>Entidad emisora</TableCell>
-                  <TableCell>Emisión</TableCell>
-                  <TableCell>Vencimiento</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell sx={{ pr: 3 }}>Archivo</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {operador.certificaciones.map((cert) => (
-                  <TableRow key={cert.id} hover>
-                    <TableCell sx={{ pl: 3 }}>{cert.equipo?.nombre}</TableCell>
-                    <TableCell>{cert.nombreCertificacion}</TableCell>
-                    <TableCell>{cert.entidadEmisora}</TableCell>
-                    <TableCell>{formatFecha(cert.fechaEmision)}</TableCell>
-                    <TableCell>{formatFecha(cert.fechaVencimiento)}</TableCell>
-                    <TableCell>
-                      <EstadoCertificacionBadge estado={cert.estado} />
-                    </TableCell>
-                    <TableCell sx={{ pr: 3 }}>
-                      {cert.archivoUrl ? (
-                        <Link href={cert.archivoUrl} target="_blank" rel="noreferrer">
-                          Ver
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </Box>
-        )}
-      </SeccionCard>
+        </Box>
+
+        <Divider />
+
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Eyebrow sx={{ mb: 0 }}>Certificaciones</Eyebrow>
+            <Button
+              onClick={() => setModalCertAbierto(true)}
+              variant="contained"
+              color="secondary"
+              startIcon={<AddRoundedIcon />}
+            >
+              Agregar certificación
+            </Button>
+          </Box>
+
+          {operador.certificaciones.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+              Este operador no tiene certificaciones registradas.
+            </Typography>
+          ) : (
+            <Box sx={{ overflowX: 'auto', mx: -3 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ pl: 3 }}>Equipo</TableCell>
+                    <TableCell>Certificación</TableCell>
+                    <TableCell>Entidad emisora</TableCell>
+                    <TableCell>Emisión</TableCell>
+                    <TableCell>Vencimiento</TableCell>
+                    <TableCell>Estado</TableCell>
+                    <TableCell sx={{ pr: 3 }}>Archivo</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {operador.certificaciones.map((cert) => (
+                    <TableRow key={cert.id} hover>
+                      <TableCell sx={{ pl: 3 }}>{cert.equipo?.nombre}</TableCell>
+                      <TableCell>{cert.nombreCertificacion}</TableCell>
+                      <TableCell>{cert.entidadEmisora}</TableCell>
+                      <TableCell>{formatFecha(cert.fechaEmision)}</TableCell>
+                      <TableCell>{formatFecha(cert.fechaVencimiento)}</TableCell>
+                      <TableCell>
+                        <EstadoCertificacionBadge estado={cert.estado} />
+                      </TableCell>
+                      <TableCell sx={{ pr: 3 }}>
+                        {cert.archivoUrl ? (
+                          <Link href={cert.archivoUrl} target="_blank" rel="noreferrer">
+                            Ver
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          )}
+        </Box>
+      </Card>
 
       <Modal open={modalCertAbierto} onClose={() => setModalCertAbierto(false)} title="Agregar certificación">
         <CertificacionForm
