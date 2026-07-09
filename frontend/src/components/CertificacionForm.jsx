@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import { certificacionSchema } from '../schemas/certificacionSchema';
 import FormField from './FormField';
+import FormDatePicker from './FormDatePicker';
 import FormAutocomplete from './FormAutocomplete';
 import ModalFormActions from './ModalFormActions';
 
@@ -79,14 +80,13 @@ function CertificacionForm({ equipos, operadores = [], defaultValues, onSubmit, 
         </Grid>
 
         <Grid item xs={12}>
-          <FormField label="Fecha de emisión" type="date" InputLabelProps={{ shrink: true }} {...register('fechaEmision')} />
+          <FormDatePicker label="Fecha de emisión" name="fechaEmision" control={control} />
         </Grid>
         <Grid item xs={12}>
-          <FormField
+          <FormDatePicker
             label="Fecha de vencimiento"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            {...register('fechaVencimiento')}
+            name="fechaVencimiento"
+            control={control}
             error={Boolean(errors.fechaVencimiento)}
             helperText={errors.fechaVencimiento?.message}
           />

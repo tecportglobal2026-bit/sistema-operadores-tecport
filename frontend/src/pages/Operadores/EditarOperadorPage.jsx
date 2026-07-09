@@ -18,6 +18,7 @@ import { formatFechaInput } from '../../utils/format';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import FormField from '../../components/FormField';
+import FormDatePicker from '../../components/FormDatePicker';
 import FormAutocomplete from '../../components/FormAutocomplete';
 
 function SeccionTitulo({ children }) {
@@ -115,7 +116,7 @@ function EditarOperadorPage() {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormField label="Fecha de nacimiento" type="date" InputLabelProps={{ shrink: true }} {...register('fechaNacimiento')} />
+              <FormDatePicker label="Fecha de nacimiento" name="fechaNacimiento" control={control} />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormField label="Celular" {...register('celular')} />

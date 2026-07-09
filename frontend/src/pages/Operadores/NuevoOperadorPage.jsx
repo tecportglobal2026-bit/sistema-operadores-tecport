@@ -20,6 +20,7 @@ import { REGIONES, NIVELES } from '../../utils/constants';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import FormField from '../../components/FormField';
+import FormDatePicker from '../../components/FormDatePicker';
 import FormAutocomplete from '../../components/FormAutocomplete';
 
 function SeccionTitulo({ children }) {
@@ -100,7 +101,7 @@ function NuevoOperadorPage() {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormField label="Fecha de nacimiento" type="date" InputLabelProps={{ shrink: true }} {...register('fechaNacimiento')} />
+              <FormDatePicker label="Fecha de nacimiento" name="fechaNacimiento" control={control} />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormField label="Celular" {...register('celular')} />
@@ -233,19 +234,13 @@ function NuevoOperadorPage() {
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormField
-                  label="Fecha de emisión"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  {...register('certificacion.fechaEmision')}
-                />
+                <FormDatePicker label="Fecha de emisión" name="certificacion.fechaEmision" control={control} />
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormField
+                <FormDatePicker
                   label="Fecha de vencimiento"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  {...register('certificacion.fechaVencimiento')}
+                  name="certificacion.fechaVencimiento"
+                  control={control}
                   error={Boolean(errors.certificacion?.fechaVencimiento)}
                   helperText={errors.certificacion?.fechaVencimiento?.message}
                 />
