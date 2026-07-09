@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { DataGrid } from '@mui/x-data-grid';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Alert from '@mui/material/Alert';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import * as empresasService from '../../services/empresas';
 import { empresaSchema } from '../../schemas/empresaSchema';
 import { TIPOS_EMPRESA, REGIONES } from '../../utils/constants';
@@ -8,9 +18,13 @@ import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Modal from '../../components/Modal';
 import SearchInput from '../../components/SearchInput';
+import ExportGridToolbar from '../../components/ExportGridToolbar';
+import FormField from '../../components/FormField';
+import ModalFormActions from '../../components/ModalFormActions';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { exportarExcel, obtenerValorExportable } from '../../utils/exportExcel';
 
-function EmpresaForm({ defaultValues, onSubmit, enviando }) {
+function EmpresaForm({ defaultValues, onSubmit, onCancel, enviando }) {
   const {
     register,
     handleSubmit,
@@ -18,52 +32,56 @@ function EmpresaForm({ defaultValues, onSubmit, enviando }) {
   } = useForm({ resolver: zodResolver(empresaSchema), defaultValues });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Nombre</label>
-        <input {...register('nombre')} className="w-full rounded-md border px-3 py-2 text-sm" />
-        {errors.nombre && <p className="text-xs text-red-600 mt-1">{errors.nombre.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">RUC</label>
-        <input {...register('ruc')} className="w-full rounded-md border px-3 py-2 text-sm" />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Tipo de empresa</label>
-        <select {...register('tipoEmpresa')} className="w-full rounded-md border px-3 py-2 text-sm">
-          <option value="">Selecciona...</option>
-          {TIPOS_EMPRESA.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {tipo}
-            </option>
-          ))}
-        </select>
-        {errors.tipoEmpresa && <p className="text-xs text-red-600 mt-1">{errors.tipoEmpresa.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Región</label>
-        <select {...register('region')} className="w-full rounded-md border px-3 py-2 text-sm">
-          <option value="">Selecciona...</option>
-          {REGIONES.map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
-          ))}
-        </select>
-        {errors.region && <p className="text-xs text-red-600 mt-1">{errors.region.message}</p>}
-      </div>
-
-      <button
-        type="submit"
-        disabled={enviando}
-        className="w-full rounded-md bg-primary text-white py-2 text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
-      >
-        {enviando ? 'Guardando...' : 'Guardar'}
-      </button>
-    </form>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Grid container rowSpacing={2} columnSpacing={2}>
+        <Grid item xs={12}>
+          <FormField
+            label="Nombre"
+            {...register('nombre')}
+            error={Boolean(errors.nombre)}
+            helperText={errors.nombre?.message}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <FormField label="RUC" {...register('ruc')} />
+        </Grid>
+        <Grid item xs={12}>
+          <FormField
+            select
+            label="Tipo de empresa"
+            defaultValue={defaultValues.tipoEmpresa || ''}
+            {...register('tipoEmpresa')}
+            error={Boolean(errors.tipoEmpresa)}
+            helperText={errors.tipoEmpresa?.message}
+          >
+            <MenuItem value="">Selecciona...</MenuItem>
+            {TIPOS_EMPRESA.map((tipo) => (
+              <MenuItem key={tipo} value={tipo}>
+                {tipo}
+              </MenuItem>
+            ))}
+          </FormField>
+        </Grid>
+        <Grid item xs={12}>
+          <FormField
+            select
+            label="Región"
+            defaultValue={defaultValues.region || ''}
+            {...register('region')}
+            error={Boolean(errors.region)}
+            helperText={errors.region?.message}
+          >
+            <MenuItem value="">Selecciona...</MenuItem>
+            {REGIONES.map((region) => (
+              <MenuItem key={region} value={region}>
+                {region}
+              </MenuItem>
+            ))}
+          </FormField>
+        </Grid>
+      </Grid>
+      <ModalFormActions onCancel={onCancel} enviando={enviando} />
+    </Box>
   );
 }
 
@@ -76,6 +94,7 @@ function EmpresasPage() {
   const [empresaEditar, setEmpresaEditar] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [exportando, setExportando] = useState(false);
 
   const cargarEmpresas = async () => {
     setCargando(true);
@@ -122,69 +141,80 @@ function EmpresasPage() {
     }
   };
 
+  const columns = [
+    { field: 'nombre', headerName: 'Nombre', flex: 1.2, minWidth: 180 },
+    { field: 'ruc', headerName: 'RUC', width: 130, valueGetter: (value) => value || '—' },
+    { field: 'tipoEmpresa', headerName: 'Tipo', width: 140 },
+    { field: 'region', headerName: 'Región', width: 120 },
+    {
+      field: 'acciones',
+      headerName: 'Acciones',
+      width: 100,
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      renderCell: (params) => (
+        <Tooltip title="Editar">
+          <IconButton size="small" onClick={() => abrirEditar(params.row)}>
+            <EditRoundedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+  ];
+
+  const handleExportarExcel = async () => {
+    setExportando(true);
+    try {
+      const columnasExportables = columns.filter((c) => !c.disableExport);
+      await exportarExcel({
+        columnas: columnasExportables.map((c) => ({ header: c.headerName, key: c.field })),
+        filas: empresas.map((fila) =>
+          Object.fromEntries(columnasExportables.map((c) => [c.field, obtenerValorExportable(c, fila)]))
+        ),
+        nombreArchivo: 'empresas-tecport',
+        nombreHoja: 'Empresas',
+      });
+    } catch {
+      setError('No se pudo generar el archivo Excel');
+    } finally {
+      setExportando(false);
+    }
+  };
+
   return (
-    <div>
+    <Box>
       <PageHeader
         title="Empresas"
         actions={
-          <button
-            onClick={abrirNueva}
-            className="rounded-md bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary-dark"
-          >
+          <Button onClick={abrirNueva} variant="contained" startIcon={<AddRoundedIcon />}>
             Nueva empresa
-          </button>
+          </Button>
         }
       />
 
-      <div className="mb-4 max-w-xs">
-        <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o RUC..." />
-      </div>
+      <Box sx={{ mb: 2.5, maxWidth: 320 }}>
+        <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o RUC..." fullWidth />
+      </Box>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-neutral border-b">
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">RUC</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Región</th>
-                <th className="px-4 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral">
-                    Cargando...
-                  </td>
-                </tr>
-              ) : empresas.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral">
-                    No hay empresas registradas.
-                  </td>
-                </tr>
-              ) : (
-                empresas.map((empresa) => (
-                  <tr key={empresa.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-primary">{empresa.nombre}</td>
-                    <td className="px-4 py-3">{empresa.ruc || '—'}</td>
-                    <td className="px-4 py-3">{empresa.tipoEmpresa}</td>
-                    <td className="px-4 py-3">{empresa.region}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => abrirEditar(empresa)} className="text-primary hover:underline">
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <Card sx={{ height: 520 }}>
+        <DataGrid
+          rows={empresas}
+          columns={columns}
+          loading={cargando}
+          disableRowSelectionOnClick
+          pageSizeOptions={[10, 20, 50]}
+          slots={{ toolbar: ExportGridToolbar }}
+          slotProps={{ toolbar: { onExport: handleExportarExcel, loading: exportando } }}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          sx={{ border: 'none' }}
+        />
       </Card>
 
       <Modal
@@ -196,10 +226,11 @@ function EmpresasPage() {
           key={empresaEditar?.id || 'nueva'}
           defaultValues={empresaEditar || { nombre: '', ruc: '', tipoEmpresa: '', region: '' }}
           onSubmit={guardar}
+          onCancel={() => setModalAbierto(false)}
           enviando={enviando}
         />
       </Modal>
-    </div>
+    </Box>
   );
 }
 

@@ -1,5 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import { DataGrid } from '@mui/x-data-grid';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Alert from '@mui/material/Alert';
+import Typography from '@mui/material/Typography';
+import DialogActions from '@mui/material/DialogActions';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import * as operadoresService from '../../services/operadores';
 import * as empresasService from '../../services/empresas';
 import * as equiposService from '../../services/equipos';
@@ -8,12 +24,34 @@ import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Modal from '../../components/Modal';
 import SearchInput from '../../components/SearchInput';
-import Pagination from '../../components/Pagination';
 import EstadoOperadorBadge from '../../components/EstadoOperadorBadge';
 import EstadoCertificacionBadge from '../../components/EstadoCertificacionBadge';
+import ExportGridToolbar from '../../components/ExportGridToolbar';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { formatFecha, calcularEdad } from '../../utils/format';
+import { exportarExcel, obtenerValorExportable } from '../../utils/exportExcel';
 
 const PAGE_SIZE = 10;
+
+function mapOperadorARow(op) {
+  return {
+    id: op.id,
+    nombreCompleto: op.nombreCompleto,
+    dni: op.dni,
+    edad: calcularEdad(op.fechaNacimiento),
+    celular: op.celular,
+    correo: op.correo,
+    linkedin: op.linkedin,
+    empresaNombre: op.empresa?.nombre,
+    region: op.region,
+    nivel: op.nivel,
+    equipoNombre: op.certificacionPrincipal?.equipo?.nombre,
+    certificacionNombre: op.certificacionPrincipal?.nombreCertificacion || '—',
+    vencimiento: op.certificacionPrincipal?.fechaVencimiento,
+    estadoCertificacion: op.certificacionPrincipal?.estado,
+    activo: op.activo,
+  };
+}
 
 function OperadoresPage() {
   const [empresas, setEmpresas] = useState([]);
@@ -26,7 +64,7 @@ function OperadoresPage() {
   const [equipoId, setEquipoId] = useState('');
   const [activo, setActivo] = useState('');
   const [estadoCertificacion, setEstadoCertificacion] = useState('');
-  const [page, setPage] = useState(1);
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: PAGE_SIZE });
 
   const [resultado, setResultado] = useState({ data: [], total: 0 });
   const [cargando, setCargando] = useState(true);
@@ -35,6 +73,7 @@ function OperadoresPage() {
   const [operadorDesactivar, setOperadorDesactivar] = useState(null);
   const [motivoInactivo, setMotivoInactivo] = useState('');
   const [accionEnCurso, setAccionEnCurso] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     empresasService.listarEmpresas().then(setEmpresas).catch(() => {});
@@ -42,7 +81,7 @@ function OperadoresPage() {
   }, []);
 
   useEffect(() => {
-    setPage(1);
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
   }, [busquedaDebounced, region, empresaId, equipoId, activo, estadoCertificacion]);
 
   const cargarOperadores = useCallback(async () => {
@@ -56,8 +95,8 @@ function OperadoresPage() {
         equipoId: equipoId || undefined,
         activo: activo || undefined,
         estadoCertificacion: estadoCertificacion || undefined,
-        page,
-        pageSize: PAGE_SIZE,
+        page: paginationModel.page + 1,
+        pageSize: paginationModel.pageSize,
       });
       setResultado(data);
     } catch {
@@ -65,7 +104,7 @@ function OperadoresPage() {
     } finally {
       setCargando(false);
     }
-  }, [busquedaDebounced, region, empresaId, equipoId, activo, estadoCertificacion, page]);
+  }, [busquedaDebounced, region, empresaId, equipoId, activo, estadoCertificacion, paginationModel]);
 
   useEffect(() => {
     cargarOperadores();
@@ -103,175 +142,267 @@ function OperadoresPage() {
     }
   };
 
+  const handleExportarExcel = async () => {
+    setExportando(true);
+    try {
+      const data = await operadoresService.listarOperadores({
+        search: busquedaDebounced || undefined,
+        region: region || undefined,
+        empresaId: empresaId || undefined,
+        equipoId: equipoId || undefined,
+        activo: activo || undefined,
+        estadoCertificacion: estadoCertificacion || undefined,
+        page: 1,
+        pageSize: 10000,
+      });
+      const filasCompletas = data.data.map(mapOperadorARow);
+      const columnasExportables = columns.filter((c) => !c.disableExport);
+      await exportarExcel({
+        columnas: columnasExportables.map((c) => ({ header: c.headerName, key: c.field })),
+        filas: filasCompletas.map((fila) =>
+          Object.fromEntries(columnasExportables.map((c) => [c.field, obtenerValorExportable(c, fila)]))
+        ),
+        nombreArchivo: 'operadores-tecport',
+        nombreHoja: 'Operadores',
+      });
+    } catch {
+      setError('No se pudo generar el archivo Excel');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const columns = [
+    {
+      field: 'nombreCompleto',
+      headerName: 'Nombre',
+      flex: 1.3,
+      minWidth: 160,
+      renderCell: (params) => (
+        <Link component={RouterLink} to={`/operadores/${params.row.id}`} fontWeight={600}>
+          {params.value}
+        </Link>
+      ),
+    },
+    { field: 'dni', headerName: 'DNI', width: 110 },
+    { field: 'edad', headerName: 'Edad', width: 80, valueGetter: (value) => value ?? '—' },
+    { field: 'celular', headerName: 'Celular', width: 130, valueGetter: (value) => value || '—' },
+    { field: 'correo', headerName: 'Correo', width: 200, valueGetter: (value) => value || '—' },
+    {
+      field: 'linkedin',
+      headerName: 'LinkedIn',
+      width: 110,
+      sortable: false,
+      renderCell: (params) =>
+        params.value ? (
+          <Link href={params.value} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+            Ver perfil
+          </Link>
+        ) : (
+          '—'
+        ),
+    },
+    { field: 'empresaNombre', headerName: 'Empresa', flex: 1, minWidth: 140 },
+    { field: 'region', headerName: 'Región', width: 100 },
+    { field: 'nivel', headerName: 'Nivel', width: 120 },
+    { field: 'equipoNombre', headerName: 'Equipo', width: 140, valueGetter: (value) => value || '—' },
+    { field: 'certificacionNombre', headerName: 'Certificación', flex: 1, minWidth: 160 },
+    {
+      field: 'vencimiento',
+      headerName: 'Vencimiento',
+      width: 120,
+      valueGetter: (value) => formatFecha(value),
+    },
+    {
+      field: 'estadoCertificacion',
+      headerName: 'Estado cert.',
+      width: 140,
+      valueFormatter: (value) => (value ? ESTADO_CERTIFICACION_LABEL[value] : '—'),
+      renderCell: (params) => (params.value ? <EstadoCertificacionBadge estado={params.value} /> : '—'),
+    },
+    {
+      field: 'activo',
+      headerName: 'Estado',
+      width: 120,
+      valueFormatter: (value) => (value ? 'Activo' : 'Inactivo'),
+      renderCell: (params) => <EstadoOperadorBadge activo={params.value} />,
+    },
+    {
+      field: 'acciones',
+      headerName: 'Acciones',
+      width: 130,
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      renderCell: (params) => (
+        <Box>
+          <Tooltip title="Editar">
+            <IconButton size="small" component={RouterLink} to={`/operadores/${params.row.id}/editar`}>
+              <EditRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {params.row.activo ? (
+            <Tooltip title="Desactivar">
+              <IconButton size="small" color="error" onClick={() => abrirDesactivar(params.row)}>
+                <BlockRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Reactivar">
+              <IconButton size="small" color="success" onClick={() => handleReactivar(params.row)} disabled={accionEnCurso}>
+                <CheckCircleRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      ),
+    },
+  ];
+
+  const rows = resultado.data.map(mapOperadorARow);
+
   return (
-    <div>
+    <Box>
       <PageHeader
         title="Operadores"
         actions={
-          <Link
+          <Button
+            component={RouterLink}
             to="/operadores/nuevo"
-            className="rounded-md bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary-dark"
+            variant="contained"
+            startIcon={<AddRoundedIcon />}
           >
             Nuevo operador
-          </Link>
+          </Button>
         }
       />
 
-      <Card className="p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Nombre, DNI o empresa..." />
-
-          <select value={region} onChange={(e) => setRegion(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
-            <option value="">Todas las regiones</option>
-            {REGIONES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-
-          <select value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
-            <option value="">Todas las empresas</option>
-            {empresas.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nombre}
-              </option>
-            ))}
-          </select>
-
-          <select value={equipoId} onChange={(e) => setEquipoId(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
-            <option value="">Todos los equipos</option>
-            {equipos.map((eq) => (
-              <option key={eq.id} value={eq.id}>
-                {eq.nombre}
-              </option>
-            ))}
-          </select>
-
-          <select value={activo} onChange={(e) => setActivo(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
-            <option value="">Todos los estados</option>
-            <option value="true">Activo</option>
-            <option value="false">Inactivo</option>
-          </select>
-
-          <select
-            value={estadoCertificacion}
-            onChange={(e) => setEstadoCertificacion(e.target.value)}
-            className="rounded-md border px-3 py-2 text-sm"
-          >
-            <option value="">Cualquier certificación</option>
-            {ESTADOS_CERTIFICACION.map((estado) => (
-              <option key={estado} value={estado}>
-                {ESTADO_CERTIFICACION_LABEL[estado]}
-              </option>
-            ))}
-            <option value="sin_certificacion">Sin certificación</option>
-          </select>
-        </div>
+      <Card sx={{ p: 2.5, mb: 2.5 }}>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12} sm={6} md={3}>
+            <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Nombre, DNI o empresa..." fullWidth />
+          </Grid>
+          <Grid item xs={6} sm={3} md={1.8}>
+            <TextField select fullWidth size="small" label="Región" value={region} onChange={(e) => setRegion(e.target.value)}>
+              <MenuItem value="">Todas</MenuItem>
+              {REGIONES.map((r) => (
+                <MenuItem key={r} value={r}>
+                  {r}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={6} sm={3} md={2.4}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Empresa"
+              value={empresaId}
+              onChange={(e) => setEmpresaId(e.target.value)}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {empresas.map((e) => (
+                <MenuItem key={e.id} value={e.id}>
+                  {e.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={6} sm={3} md={2}>
+            <TextField select fullWidth size="small" label="Equipo" value={equipoId} onChange={(e) => setEquipoId(e.target.value)}>
+              <MenuItem value="">Todos</MenuItem>
+              {equipos.map((eq) => (
+                <MenuItem key={eq.id} value={eq.id}>
+                  {eq.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={6} sm={3} md={1.4}>
+            <TextField select fullWidth size="small" label="Estado" value={activo} onChange={(e) => setActivo(e.target.value)}>
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="true">Activo</MenuItem>
+              <MenuItem value="false">Inactivo</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6} md={1.4}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Certificación"
+              value={estadoCertificacion}
+              onChange={(e) => setEstadoCertificacion(e.target.value)}
+            >
+              <MenuItem value="">Cualquiera</MenuItem>
+              {ESTADOS_CERTIFICACION.map((estado) => (
+                <MenuItem key={estado} value={estado}>
+                  {ESTADO_CERTIFICACION_LABEL[estado]}
+                </MenuItem>
+              ))}
+              <MenuItem value="sin_certificacion">Sin certificación</MenuItem>
+            </TextField>
+          </Grid>
+        </Grid>
       </Card>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-neutral border-b">
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">DNI</th>
-                <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Región</th>
-                <th className="px-4 py-3">Nivel</th>
-                <th className="px-4 py-3">Certificación</th>
-                <th className="px-4 py-3">Estado cert.</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-neutral">
-                    Cargando...
-                  </td>
-                </tr>
-              ) : resultado.data.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-neutral">
-                    No se encontraron operadores.
-                  </td>
-                </tr>
-              ) : (
-                resultado.data.map((op) => (
-                  <tr key={op.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-primary">
-                      <Link to={`/operadores/${op.id}`} className="hover:underline">
-                        {op.nombreCompleto}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">{op.dni}</td>
-                    <td className="px-4 py-3">{op.empresa?.nombre}</td>
-                    <td className="px-4 py-3">{op.region}</td>
-                    <td className="px-4 py-3">{op.nivel}</td>
-                    <td className="px-4 py-3">{op.certificacionPrincipal?.nombreCertificacion || '—'}</td>
-                    <td className="px-4 py-3">
-                      {op.certificacionPrincipal ? (
-                        <EstadoCertificacionBadge estado={op.certificacionPrincipal.estado} />
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <EstadoOperadorBadge activo={op.activo} />
-                    </td>
-                    <td className="px-4 py-3 space-x-2 whitespace-nowrap">
-                      <Link to={`/operadores/${op.id}/editar`} className="text-primary hover:underline">
-                        Editar
-                      </Link>
-                      {op.activo ? (
-                        <button onClick={() => abrirDesactivar(op)} className="text-red-600 hover:underline">
-                          Desactivar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleReactivar(op)}
-                          disabled={accionEnCurso}
-                          className="text-green-700 hover:underline disabled:opacity-60"
-                        >
-                          Reactivar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <Card sx={{ height: 560 }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          loading={cargando}
+          rowCount={resultado.total}
+          paginationMode="server"
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[10, 20, 50]}
+          disableRowSelectionOnClick
+          slots={{ toolbar: ExportGridToolbar }}
+          slotProps={{ toolbar: { onExport: handleExportarExcel, loading: exportando } }}
+          initialState={{
+            pinnedColumns: { left: ['nombreCompleto'], right: ['acciones'] },
+            columns: {
+              columnVisibilityModel: { edad: false, celular: false, correo: false, linkedin: false },
+            },
+          }}
+          sx={{ border: 'none' }}
+        />
       </Card>
-
-      <Pagination page={page} pageSize={PAGE_SIZE} total={resultado.total} onPageChange={setPage} />
 
       <Modal open={Boolean(operadorDesactivar)} onClose={() => setOperadorDesactivar(null)} title="Desactivar operador">
-        <p className="text-sm text-neutral mb-3">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Vas a desactivar a <strong>{operadorDesactivar?.nombreCompleto}</strong>. Indica el motivo:
-        </p>
-        <textarea
+        </Typography>
+        <TextField
           value={motivoInactivo}
           onChange={(e) => setMotivoInactivo(e.target.value)}
+          multiline
           rows={3}
-          className="w-full rounded-md border px-3 py-2 text-sm mb-4"
+          fullWidth
           placeholder="Motivo de inactivación"
         />
-        <button
-          onClick={confirmarDesactivar}
-          disabled={accionEnCurso || !motivoInactivo.trim()}
-          className="w-full rounded-md bg-red-600 text-white py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-60"
-        >
-          {accionEnCurso ? 'Procesando...' : 'Confirmar desactivación'}
-        </button>
+        <DialogActions sx={{ px: 0, pt: 3 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setOperadorDesactivar(null)} disabled={accionEnCurso}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmarDesactivar}
+            disabled={accionEnCurso || !motivoInactivo.trim()}
+            variant="contained"
+            color="error"
+          >
+            {accionEnCurso ? 'Procesando...' : 'Confirmar desactivación'}
+          </Button>
+        </DialogActions>
       </Modal>
-    </div>
+    </Box>
   );
 }
 

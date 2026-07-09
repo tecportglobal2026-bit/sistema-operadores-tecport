@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Collapse from '@mui/material/Collapse';
+import Divider from '@mui/material/Divider';
 import * as operadoresService from '../../services/operadores';
 import * as empresasService from '../../services/empresas';
 import * as equiposService from '../../services/equipos';
@@ -9,6 +19,16 @@ import { operadorCrearSchema } from '../../schemas/operadorSchema';
 import { REGIONES, NIVELES } from '../../utils/constants';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
+import FormField from '../../components/FormField';
+import FormAutocomplete from '../../components/FormAutocomplete';
+
+function SeccionTitulo({ children }) {
+  return (
+    <Typography variant="subtitle1" fontWeight={700} color="text.primary" sx={{ mb: 2 }}>
+      {children}
+    </Typography>
+  );
+}
 
 function NuevoOperadorPage() {
   const navigate = useNavigate();
@@ -23,6 +43,7 @@ function NuevoOperadorPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -48,177 +69,207 @@ function NuevoOperadorPage() {
   };
 
   return (
-    <div>
+    <Box sx={{ maxWidth: 860 }}>
       <PageHeader title="Nuevo operador" />
 
-      {errorServidor && <p className="text-sm text-red-600 mb-4">{errorServidor}</p>}
+      {errorServidor && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorServidor}
+        </Alert>
+      )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="p-6">
-          <h2 className="text-sm font-semibold text-primary mb-4">Datos personales</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Nombre completo</label>
-              <input {...register('nombreCompleto')} className="w-full rounded-md border px-3 py-2 text-sm" />
-              {errors.nombreCompleto && <p className="text-xs text-red-600 mt-1">{errors.nombreCompleto.message}</p>}
-            </div>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <Card sx={{ p: 4 }}>
+          <SeccionTitulo>Datos personales</SeccionTitulo>
+          <Grid container rowSpacing={2.5} columnSpacing={4}>
+            <Grid item xs={12} md={6}>
+              <FormField
+                label="Nombre completo"
+                {...register('nombreCompleto')}
+                error={Boolean(errors.nombreCompleto)}
+                helperText={errors.nombreCompleto?.message}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField
+                label="DNI"
+                inputProps={{ maxLength: 8 }}
+                {...register('dni')}
+                error={Boolean(errors.dni)}
+                helperText={errors.dni?.message}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField label="Fecha de nacimiento" type="date" InputLabelProps={{ shrink: true }} {...register('fechaNacimiento')} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField label="Celular" {...register('celular')} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField
+                label="Correo"
+                {...register('correo')}
+                error={Boolean(errors.correo)}
+                helperText={errors.correo?.message}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField
+                label="LinkedIn"
+                {...register('linkedin')}
+                error={Boolean(errors.linkedin)}
+                helperText={errors.linkedin?.message}
+              />
+            </Grid>
+          </Grid>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">DNI</label>
-              <input {...register('dni')} maxLength={8} className="w-full rounded-md border px-3 py-2 text-sm" />
-              {errors.dni && <p className="text-xs text-red-600 mt-1">{errors.dni.message}</p>}
-            </div>
+          <Divider sx={{ my: 3.5 }} />
 
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Fecha de nacimiento</label>
-              <input type="date" {...register('fechaNacimiento')} className="w-full rounded-md border px-3 py-2 text-sm" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Celular</label>
-              <input {...register('celular')} className="w-full rounded-md border px-3 py-2 text-sm" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Correo</label>
-              <input {...register('correo')} className="w-full rounded-md border px-3 py-2 text-sm" />
-              {errors.correo && <p className="text-xs text-red-600 mt-1">{errors.correo.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">LinkedIn</label>
-              <input {...register('linkedin')} className="w-full rounded-md border px-3 py-2 text-sm" />
-              {errors.linkedin && <p className="text-xs text-red-600 mt-1">{errors.linkedin.message}</p>}
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-sm font-semibold text-primary mb-4">Datos laborales</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Región</label>
-              <select {...register('region')} className="w-full rounded-md border px-3 py-2 text-sm">
-                <option value="">Selecciona...</option>
+          <SeccionTitulo>Datos laborales</SeccionTitulo>
+          <Grid container rowSpacing={2.5} columnSpacing={4}>
+            <Grid item xs={12} md={6}>
+              <FormField
+                select
+                label="Región"
+                defaultValue=""
+                {...register('region')}
+                error={Boolean(errors.region)}
+                helperText={errors.region?.message}
+              >
+                <MenuItem value="">Selecciona...</MenuItem>
                 {REGIONES.map((r) => (
-                  <option key={r} value={r}>
+                  <MenuItem key={r} value={r}>
                     {r}
-                  </option>
+                  </MenuItem>
                 ))}
-              </select>
-              {errors.region && <p className="text-xs text-red-600 mt-1">{errors.region.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Empresa</label>
-              <select {...register('empresaId')} className="w-full rounded-md border px-3 py-2 text-sm">
-                <option value="">Selecciona...</option>
-                {empresas.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nombre}
-                  </option>
-                ))}
-              </select>
-              {errors.empresaId && <p className="text-xs text-red-600 mt-1">{errors.empresaId.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral mb-1">Nivel</label>
-              <select {...register('nivel')} className="w-full rounded-md border px-3 py-2 text-sm">
-                <option value="">Selecciona...</option>
+              </FormField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="empresaId"
+                control={control}
+                render={({ field }) => (
+                  <FormAutocomplete
+                    label="Empresa"
+                    options={empresas}
+                    getOptionLabel={(op) => op.nombre || ''}
+                    isOptionEqualToValue={(op, val) => op.id === val.id}
+                    value={empresas.find((e) => e.id === field.value) || null}
+                    onChange={(_, value) => field.onChange(value?.id || '')}
+                    error={Boolean(errors.empresaId)}
+                    helperText={errors.empresaId?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormField
+                select
+                label="Nivel"
+                defaultValue=""
+                {...register('nivel')}
+                error={Boolean(errors.nivel)}
+                helperText={errors.nivel?.message}
+              >
+                <MenuItem value="">Selecciona...</MenuItem>
                 {NIVELES.map((nivel) => (
-                  <option key={nivel} value={nivel}>
+                  <MenuItem key={nivel} value={nivel}>
                     {nivel}
-                  </option>
+                  </MenuItem>
                 ))}
-              </select>
-              {errors.nivel && <p className="text-xs text-red-600 mt-1">{errors.nivel.message}</p>}
-            </div>
-          </div>
+              </FormField>
+            </Grid>
+            <Grid item xs={12}>
+              <FormField label="Observaciones" multiline rows={2} {...register('observaciones')} />
+            </Grid>
+          </Grid>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-neutral mb-1">Observaciones</label>
-            <textarea {...register('observaciones')} rows={2} className="w-full rounded-md border px-3 py-2 text-sm" />
-          </div>
+          <Divider sx={{ my: 3.5 }} />
+
+          <FormControlLabel
+            control={<Checkbox size="small" {...register('tieneCertificacion')} />}
+            label={
+              <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                Registrar certificación inicial
+              </Typography>
+            }
+            sx={{ mb: tieneCertificacion ? 2.5 : 0 }}
+          />
+
+          <Collapse in={tieneCertificacion} unmountOnExit>
+            <Grid container rowSpacing={2.5} columnSpacing={4}>
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="certificacion.equipoId"
+                  control={control}
+                  render={({ field }) => (
+                    <FormAutocomplete
+                      label="Equipo"
+                      options={equipos}
+                      getOptionLabel={(eq) => eq.nombre || ''}
+                      isOptionEqualToValue={(eq, val) => eq.id === val.id}
+                      value={equipos.find((eq) => eq.id === field.value) || null}
+                      onChange={(_, value) => field.onChange(value?.id || '')}
+                      error={Boolean(errors.certificacion?.equipoId)}
+                      helperText={errors.certificacion?.equipoId?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormField
+                  label="Nombre de certificación"
+                  {...register('certificacion.nombreCertificacion')}
+                  error={Boolean(errors.certificacion?.nombreCertificacion)}
+                  helperText={errors.certificacion?.nombreCertificacion?.message}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormField
+                  label="Entidad emisora"
+                  {...register('certificacion.entidadEmisora')}
+                  error={Boolean(errors.certificacion?.entidadEmisora)}
+                  helperText={errors.certificacion?.entidadEmisora?.message}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormField
+                  label="Fecha de emisión"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  {...register('certificacion.fechaEmision')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormField
+                  label="Fecha de vencimiento"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  {...register('certificacion.fechaVencimiento')}
+                  error={Boolean(errors.certificacion?.fechaVencimiento)}
+                  helperText={errors.certificacion?.fechaVencimiento?.message}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormField
+                  label="Archivo (URL evidencia)"
+                  {...register('certificacion.archivoUrl')}
+                  error={Boolean(errors.certificacion?.archivoUrl)}
+                  helperText={errors.certificacion?.archivoUrl?.message}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormField label="Observaciones" {...register('certificacion.observaciones')} />
+              </Grid>
+            </Grid>
+          </Collapse>
         </Card>
 
-        <Card className="p-6">
-          <label className="flex items-center gap-2 mb-4">
-            <input type="checkbox" {...register('tieneCertificacion')} className="rounded border" />
-            <span className="text-sm font-semibold text-primary">Registrar certificación inicial</span>
-          </label>
-
-          {tieneCertificacion && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Equipo</label>
-                <select {...register('certificacion.equipoId')} className="w-full rounded-md border px-3 py-2 text-sm">
-                  <option value="">Selecciona...</option>
-                  {equipos.map((equipo) => (
-                    <option key={equipo.id} value={equipo.id}>
-                      {equipo.nombre}
-                    </option>
-                  ))}
-                </select>
-                {errors.certificacion?.equipoId && (
-                  <p className="text-xs text-red-600 mt-1">{errors.certificacion.equipoId.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Nombre de certificación</label>
-                <input {...register('certificacion.nombreCertificacion')} className="w-full rounded-md border px-3 py-2 text-sm" />
-                {errors.certificacion?.nombreCertificacion && (
-                  <p className="text-xs text-red-600 mt-1">{errors.certificacion.nombreCertificacion.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Entidad emisora</label>
-                <input {...register('certificacion.entidadEmisora')} className="w-full rounded-md border px-3 py-2 text-sm" />
-                {errors.certificacion?.entidadEmisora && (
-                  <p className="text-xs text-red-600 mt-1">{errors.certificacion.entidadEmisora.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Fecha de emisión</label>
-                <input type="date" {...register('certificacion.fechaEmision')} className="w-full rounded-md border px-3 py-2 text-sm" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Fecha de vencimiento</label>
-                <input type="date" {...register('certificacion.fechaVencimiento')} className="w-full rounded-md border px-3 py-2 text-sm" />
-                {errors.certificacion?.fechaVencimiento && (
-                  <p className="text-xs text-red-600 mt-1">{errors.certificacion.fechaVencimiento.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral mb-1">Archivo (URL evidencia)</label>
-                <input {...register('certificacion.archivoUrl')} className="w-full rounded-md border px-3 py-2 text-sm" />
-                {errors.certificacion?.archivoUrl && (
-                  <p className="text-xs text-red-600 mt-1">{errors.certificacion.archivoUrl.message}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-neutral mb-1">Observaciones</label>
-                <textarea {...register('certificacion.observaciones')} rows={2} className="w-full rounded-md border px-3 py-2 text-sm" />
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-primary text-white px-6 py-2 text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
-        >
+        <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ mt: 3 }}>
           {isSubmitting ? 'Guardando...' : 'Crear operador'}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Box>
+    </Box>
   );
 }
 

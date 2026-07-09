@@ -1,4 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useAuth } from '../hooks/useAuth';
 
 export function ProtectedRoute() {
@@ -6,7 +8,11 @@ export function ProtectedRoute() {
   const location = useLocation();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center text-neutral">Cargando...</div>;
+    return (
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress color="primary" />
+      </Box>
+    );
   }
 
   if (!isAuthenticated) {

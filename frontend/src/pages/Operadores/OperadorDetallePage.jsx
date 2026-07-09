@@ -1,5 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link as RouterLink, useParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import DialogActions from '@mui/material/DialogActions';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import * as operadoresService from '../../services/operadores';
 import * as equiposService from '../../services/equipos';
 import * as certificacionesService from '../../services/certificaciones';
@@ -10,6 +28,19 @@ import EstadoOperadorBadge from '../../components/EstadoOperadorBadge';
 import EstadoCertificacionBadge from '../../components/EstadoCertificacionBadge';
 import CertificacionForm from '../../components/CertificacionForm';
 import { formatFecha, calcularEdad } from '../../utils/format';
+
+function DatoFila({ label, valor }) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600} textAlign="right">
+        {valor}
+      </Typography>
+    </Box>
+  );
+}
 
 function OperadorDetallePage() {
   const { id } = useParams();
@@ -83,153 +114,170 @@ function OperadorDetallePage() {
     }
   };
 
-  if (cargando) return <p className="text-sm text-neutral">Cargando...</p>;
-  if (error && !operador) return <p className="text-sm text-red-600">{error}</p>;
+  if (cargando) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  if (error && !operador) return <Alert severity="error">{error}</Alert>;
   if (!operador) return null;
 
   return (
-    <div>
+    <Box>
       <PageHeader
         title={operador.nombreCompleto}
         subtitle={`${operador.empresa?.nombre} · Nivel ${operador.nivel}`}
         actions={
           <>
-            <Link
+            <Button
+              component={RouterLink}
               to={`/operadores/${id}/editar`}
-              className="rounded-md border border-primary text-primary px-4 py-2 text-sm font-medium hover:bg-primary hover:text-white"
+              variant="outlined"
+              startIcon={<EditRoundedIcon />}
             >
               Editar operador
-            </Link>
+            </Button>
             {operador.activo ? (
-              <button
+              <Button
                 onClick={() => setModalDesactivar(true)}
-                className="rounded-md bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
+                variant="contained"
+                color="error"
+                startIcon={<BlockRoundedIcon />}
               >
                 Desactivar operador
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={handleReactivar}
                 disabled={accionEnCurso}
-                className="rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleRoundedIcon />}
               >
                 Reactivar operador
-              </button>
+              </Button>
             )}
           </>
         }
       />
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="p-4 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-primary mb-3">Datos personales</h2>
-          <dl className="grid grid-cols-2 gap-y-2 text-sm">
-            <dt className="text-neutral">Código de operador</dt>
-            <dd>{operador.codigoOperador}</dd>
-            <dt className="text-neutral">DNI</dt>
-            <dd>{operador.dni}</dd>
-            <dt className="text-neutral">Fecha de nacimiento</dt>
-            <dd>{formatFecha(operador.fechaNacimiento)}</dd>
-            <dt className="text-neutral">Edad</dt>
-            <dd>{calcularEdad(operador.fechaNacimiento) ?? '—'}</dd>
-            <dt className="text-neutral">Celular</dt>
-            <dd>{operador.celular || '—'}</dd>
-            <dt className="text-neutral">Correo</dt>
-            <dd>{operador.correo || '—'}</dd>
-            <dt className="text-neutral">LinkedIn</dt>
-            <dd>
-              {operador.linkedin ? (
-                <a href={operador.linkedin} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                  Ver perfil
-                </a>
-              ) : (
-                '—'
-              )}
-            </dd>
-            <dt className="text-neutral">Región</dt>
-            <dd>{operador.region}</dd>
-            <dt className="text-neutral">Observaciones</dt>
-            <dd>{operador.observaciones || '—'}</dd>
-          </dl>
-        </Card>
+      <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+        <Grid item xs={12} lg={8}>
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1.5 }}>
+              Datos personales
+            </Typography>
+            <DatoFila label="Código de operador" valor={operador.codigoOperador} />
+            <DatoFila label="DNI" valor={operador.dni} />
+            <DatoFila label="Fecha de nacimiento" valor={formatFecha(operador.fechaNacimiento)} />
+            <DatoFila label="Edad" valor={calcularEdad(operador.fechaNacimiento) ?? '—'} />
+            <DatoFila label="Celular" valor={operador.celular || '—'} />
+            <DatoFila label="Correo" valor={operador.correo || '—'} />
+            <DatoFila
+              label="LinkedIn"
+              valor={
+                operador.linkedin ? (
+                  <Link href={operador.linkedin} target="_blank" rel="noreferrer">
+                    Ver perfil
+                  </Link>
+                ) : (
+                  '—'
+                )
+              }
+            />
+            <DatoFila label="Región" valor={operador.region} />
+            <DatoFila label="Observaciones" valor={operador.observaciones || '—'} />
+          </Card>
+        </Grid>
 
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold text-primary mb-3">Estado</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-neutral">Estado del operador</span>
+        <Grid item xs={12} lg={4}>
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1.5 }}>
+              Estado
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Estado del operador
+              </Typography>
               <EstadoOperadorBadge activo={operador.activo} />
-            </div>
+            </Box>
             {!operador.activo && (
               <>
-                <div>
-                  <p className="text-neutral">Motivo de inactivación</p>
-                  <p>{operador.motivoInactivo}</p>
-                </div>
-                <div>
-                  <p className="text-neutral">Fecha de inactivación</p>
-                  <p>{formatFecha(operador.fechaInactivacion)}</p>
-                </div>
+                <DatoFila label="Motivo de inactivación" valor={operador.motivoInactivo} />
+                <DatoFila label="Fecha de inactivación" valor={formatFecha(operador.fechaInactivacion)} />
               </>
             )}
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </Grid>
+      </Grid>
 
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-primary">Certificaciones</h2>
-          <button
+      <Card sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} color="primary.main">
+            Certificaciones
+          </Typography>
+          <Button
             onClick={() => setModalCertAbierto(true)}
-            className="rounded-md bg-accent text-white px-3 py-1.5 text-sm font-medium hover:opacity-90"
+            variant="contained"
+            color="secondary"
+            size="small"
+            startIcon={<AddRoundedIcon />}
           >
             Agregar certificación
-          </button>
-        </div>
+          </Button>
+        </Box>
 
         {operador.certificaciones.length === 0 ? (
-          <p className="text-sm text-neutral">Este operador no tiene certificaciones registradas.</p>
+          <Typography variant="body2" color="text.secondary">
+            Este operador no tiene certificaciones registradas.
+          </Typography>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-neutral border-b">
-                  <th className="py-2">Equipo</th>
-                  <th className="py-2">Certificación</th>
-                  <th className="py-2">Entidad emisora</th>
-                  <th className="py-2">Emisión</th>
-                  <th className="py-2">Vencimiento</th>
-                  <th className="py-2">Estado</th>
-                  <th className="py-2">Archivo</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Equipo</TableCell>
+                  <TableCell>Certificación</TableCell>
+                  <TableCell>Entidad emisora</TableCell>
+                  <TableCell>Emisión</TableCell>
+                  <TableCell>Vencimiento</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell>Archivo</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {operador.certificaciones.map((cert) => (
-                  <tr key={cert.id} className="border-b last:border-0">
-                    <td className="py-2">{cert.equipo?.nombre}</td>
-                    <td className="py-2">{cert.nombreCertificacion}</td>
-                    <td className="py-2">{cert.entidadEmisora}</td>
-                    <td className="py-2">{formatFecha(cert.fechaEmision)}</td>
-                    <td className="py-2">{formatFecha(cert.fechaVencimiento)}</td>
-                    <td className="py-2">
+                  <TableRow key={cert.id} hover>
+                    <TableCell>{cert.equipo?.nombre}</TableCell>
+                    <TableCell>{cert.nombreCertificacion}</TableCell>
+                    <TableCell>{cert.entidadEmisora}</TableCell>
+                    <TableCell>{formatFecha(cert.fechaEmision)}</TableCell>
+                    <TableCell>{formatFecha(cert.fechaVencimiento)}</TableCell>
+                    <TableCell>
                       <EstadoCertificacionBadge estado={cert.estado} />
-                    </td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell>
                       {cert.archivoUrl ? (
-                        <a href={cert.archivoUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                        <Link href={cert.archivoUrl} target="_blank" rel="noreferrer">
                           Ver
-                        </a>
+                        </Link>
                       ) : (
                         '—'
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </Box>
         )}
       </Card>
 
@@ -248,27 +296,37 @@ function OperadorDetallePage() {
             observaciones: '',
           }}
           onSubmit={handleAgregarCertificacion}
+          onCancel={() => setModalCertAbierto(false)}
           enviando={enviandoCert}
         />
       </Modal>
 
       <Modal open={modalDesactivar} onClose={() => setModalDesactivar(false)} title="Desactivar operador">
-        <p className="text-sm text-neutral mb-3">Indica el motivo de inactivación:</p>
-        <textarea
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Indica el motivo de inactivación:
+        </Typography>
+        <TextField
           value={motivoInactivo}
           onChange={(e) => setMotivoInactivo(e.target.value)}
+          multiline
           rows={3}
-          className="w-full rounded-md border px-3 py-2 text-sm mb-4"
+          fullWidth
         />
-        <button
-          onClick={confirmarDesactivar}
-          disabled={accionEnCurso || !motivoInactivo.trim()}
-          className="w-full rounded-md bg-red-600 text-white py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-60"
-        >
-          {accionEnCurso ? 'Procesando...' : 'Confirmar desactivación'}
-        </button>
+        <DialogActions sx={{ px: 0, pt: 3 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setModalDesactivar(false)} disabled={accionEnCurso}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmarDesactivar}
+            disabled={accionEnCurso || !motivoInactivo.trim()}
+            variant="contained"
+            color="error"
+          >
+            {accionEnCurso ? 'Procesando...' : 'Confirmar desactivación'}
+          </Button>
+        </DialogActions>
       </Modal>
-    </div>
+    </Box>
   );
 }
 

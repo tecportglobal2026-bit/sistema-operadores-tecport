@@ -1,11 +1,22 @@
-function SearchInput({ value, onChange, placeholder = 'Buscar...' }) {
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+
+function SearchInput({ value, onChange, placeholder = 'Buscar...', size = 'small', fullWidth }) {
   return (
-    <input
-      type="text"
+    <TextField
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      size={size}
+      fullWidth={fullWidth}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchRoundedIcon fontSize="small" color="action" />
+          </InputAdornment>
+        ),
+      }}
     />
   );
 }

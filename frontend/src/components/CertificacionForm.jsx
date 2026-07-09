@@ -1,89 +1,113 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
 import { certificacionSchema } from '../schemas/certificacionSchema';
+import FormField from './FormField';
+import FormAutocomplete from './FormAutocomplete';
+import ModalFormActions from './ModalFormActions';
 
-function CertificacionForm({ equipos, operadores = [], defaultValues, onSubmit, enviando, mostrarOperador = true }) {
+function CertificacionForm({ equipos, operadores = [], defaultValues, onSubmit, onCancel, enviando, mostrarOperador = true }) {
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({ resolver: zodResolver(certificacionSchema), defaultValues });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {mostrarOperador ? (
-        <div>
-          <label className="block text-sm font-medium text-neutral mb-1">Operador</label>
-          <select {...register('operadorId')} className="w-full rounded-md border px-3 py-2 text-sm">
-            <option value="">Selecciona...</option>
-            {operadores.map((op) => (
-              <option key={op.id} value={op.id}>
-                {op.nombreCompleto} ({op.dni})
-              </option>
-            ))}
-          </select>
-          {errors.operadorId && <p className="text-xs text-red-600 mt-1">{errors.operadorId.message}</p>}
-        </div>
-      ) : (
-        <input type="hidden" {...register('operadorId')} />
-      )}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Grid container rowSpacing={2} columnSpacing={2}>
+        {mostrarOperador ? (
+          <Grid item xs={12}>
+            <Controller
+              name="operadorId"
+              control={control}
+              render={({ field }) => (
+                <FormAutocomplete
+                  label="Operador"
+                  options={operadores}
+                  getOptionLabel={(op) => `${op.nombreCompleto} (${op.dni})`}
+                  isOptionEqualToValue={(op, val) => op.id === val.id}
+                  value={operadores.find((op) => op.id === field.value) || null}
+                  onChange={(_, value) => field.onChange(value?.id || '')}
+                  error={Boolean(errors.operadorId)}
+                  helperText={errors.operadorId?.message}
+                />
+              )}
+            />
+          </Grid>
+        ) : (
+          <input type="hidden" {...register('operadorId')} />
+        )}
 
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Equipo</label>
-        <select {...register('equipoId')} className="w-full rounded-md border px-3 py-2 text-sm">
-          <option value="">Selecciona...</option>
-          {equipos.map((equipo) => (
-            <option key={equipo.id} value={equipo.id}>
-              {equipo.nombre}
-            </option>
-          ))}
-        </select>
-        {errors.equipoId && <p className="text-xs text-red-600 mt-1">{errors.equipoId.message}</p>}
-      </div>
+        <Grid item xs={12}>
+          <Controller
+            name="equipoId"
+            control={control}
+            render={({ field }) => (
+              <FormAutocomplete
+                label="Equipo"
+                options={equipos}
+                getOptionLabel={(eq) => eq.nombre}
+                isOptionEqualToValue={(eq, val) => eq.id === val.id}
+                value={equipos.find((eq) => eq.id === field.value) || null}
+                onChange={(_, value) => field.onChange(value?.id || '')}
+                error={Boolean(errors.equipoId)}
+                helperText={errors.equipoId?.message}
+              />
+            )}
+          />
+        </Grid>
 
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Nombre de certificación</label>
-        <input {...register('nombreCertificacion')} className="w-full rounded-md border px-3 py-2 text-sm" />
-        {errors.nombreCertificacion && <p className="text-xs text-red-600 mt-1">{errors.nombreCertificacion.message}</p>}
-      </div>
+        <Grid item xs={12}>
+          <FormField
+            label="Nombre de certificación"
+            {...register('nombreCertificacion')}
+            error={Boolean(errors.nombreCertificacion)}
+            helperText={errors.nombreCertificacion?.message}
+          />
+        </Grid>
 
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Entidad emisora</label>
-        <input {...register('entidadEmisora')} className="w-full rounded-md border px-3 py-2 text-sm" />
-        {errors.entidadEmisora && <p className="text-xs text-red-600 mt-1">{errors.entidadEmisora.message}</p>}
-      </div>
+        <Grid item xs={12}>
+          <FormField
+            label="Entidad emisora"
+            {...register('entidadEmisora')}
+            error={Boolean(errors.entidadEmisora)}
+            helperText={errors.entidadEmisora?.message}
+          />
+        </Grid>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-neutral mb-1">Fecha de emisión</label>
-          <input type="date" {...register('fechaEmision')} className="w-full rounded-md border px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral mb-1">Fecha de vencimiento</label>
-          <input type="date" {...register('fechaVencimiento')} className="w-full rounded-md border px-3 py-2 text-sm" />
-          {errors.fechaVencimiento && <p className="text-xs text-red-600 mt-1">{errors.fechaVencimiento.message}</p>}
-        </div>
-      </div>
+        <Grid item xs={12}>
+          <FormField label="Fecha de emisión" type="date" InputLabelProps={{ shrink: true }} {...register('fechaEmision')} />
+        </Grid>
+        <Grid item xs={12}>
+          <FormField
+            label="Fecha de vencimiento"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            {...register('fechaVencimiento')}
+            error={Boolean(errors.fechaVencimiento)}
+            helperText={errors.fechaVencimiento?.message}
+          />
+        </Grid>
 
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Archivo (URL evidencia)</label>
-        <input {...register('archivoUrl')} placeholder="https://..." className="w-full rounded-md border px-3 py-2 text-sm" />
-        {errors.archivoUrl && <p className="text-xs text-red-600 mt-1">{errors.archivoUrl.message}</p>}
-      </div>
+        <Grid item xs={12}>
+          <FormField
+            label="Archivo (URL evidencia)"
+            placeholder="https://..."
+            {...register('archivoUrl')}
+            error={Boolean(errors.archivoUrl)}
+            helperText={errors.archivoUrl?.message}
+          />
+        </Grid>
 
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Observaciones</label>
-        <textarea {...register('observaciones')} rows={2} className="w-full rounded-md border px-3 py-2 text-sm" />
-      </div>
-
-      <button
-        type="submit"
-        disabled={enviando}
-        className="w-full rounded-md bg-primary text-white py-2 text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
-      >
-        {enviando ? 'Guardando...' : 'Guardar certificación'}
-      </button>
-    </form>
+        <Grid item xs={12}>
+          <FormField label="Observaciones" multiline rows={2} {...register('observaciones')} />
+        </Grid>
+      </Grid>
+      <ModalFormActions onCancel={onCancel} enviando={enviando} label="Guardar certificación" />
+    </Box>
   );
 }
 

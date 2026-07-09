@@ -57,7 +57,7 @@ async function listarOperadores({
     where,
     include: {
       empresa: true,
-      certificaciones: { orderBy: { fechaVencimiento: 'asc' } },
+      certificaciones: { include: { equipo: true }, orderBy: { fechaVencimiento: 'asc' } },
     },
     orderBy: { createdAt: 'desc' },
   });

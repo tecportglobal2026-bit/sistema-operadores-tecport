@@ -1,15 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { DataGrid } from '@mui/x-data-grid';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Alert from '@mui/material/Alert';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import * as equiposService from '../../services/equipos';
 import { equipoSchema } from '../../schemas/equipoSchema';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Modal from '../../components/Modal';
 import SearchInput from '../../components/SearchInput';
+import ExportGridToolbar from '../../components/ExportGridToolbar';
+import FormField from '../../components/FormField';
+import ModalFormActions from '../../components/ModalFormActions';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { exportarExcel, obtenerValorExportable } from '../../utils/exportExcel';
 
-function EquipoForm({ defaultValues, onSubmit, enviando }) {
+function EquipoForm({ defaultValues, onSubmit, onCancel, enviando }) {
   const {
     register,
     handleSubmit,
@@ -17,26 +30,22 @@ function EquipoForm({ defaultValues, onSubmit, enviando }) {
   } = useForm({ resolver: zodResolver(equipoSchema), defaultValues });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Nombre</label>
-        <input {...register('nombre')} className="w-full rounded-md border px-3 py-2 text-sm" />
-        {errors.nombre && <p className="text-xs text-red-600 mt-1">{errors.nombre.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-neutral mb-1">Descripción</label>
-        <textarea {...register('descripcion')} rows={3} className="w-full rounded-md border px-3 py-2 text-sm" />
-      </div>
-
-      <button
-        type="submit"
-        disabled={enviando}
-        className="w-full rounded-md bg-primary text-white py-2 text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
-      >
-        {enviando ? 'Guardando...' : 'Guardar'}
-      </button>
-    </form>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Grid container rowSpacing={2} columnSpacing={2}>
+        <Grid item xs={12}>
+          <FormField
+            label="Nombre"
+            {...register('nombre')}
+            error={Boolean(errors.nombre)}
+            helperText={errors.nombre?.message}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <FormField label="Descripción" multiline rows={3} {...register('descripcion')} />
+        </Grid>
+      </Grid>
+      <ModalFormActions onCancel={onCancel} enviando={enviando} />
+    </Box>
   );
 }
 
@@ -49,6 +58,7 @@ function EquiposPage() {
   const [equipoEditar, setEquipoEditar] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [exportando, setExportando] = useState(false);
 
   const cargarEquipos = async () => {
     setCargando(true);
@@ -95,65 +105,84 @@ function EquiposPage() {
     }
   };
 
+  const columns = [
+    { field: 'nombre', headerName: 'Nombre', flex: 1, minWidth: 180 },
+    {
+      field: 'descripcion',
+      headerName: 'Descripción',
+      flex: 1.5,
+      minWidth: 220,
+      valueGetter: (value) => value || '—',
+    },
+    {
+      field: 'acciones',
+      headerName: 'Acciones',
+      width: 100,
+      sortable: false,
+      filterable: false,
+      disableExport: true,
+      renderCell: (params) => (
+        <Tooltip title="Editar">
+          <IconButton size="small" onClick={() => abrirEditar(params.row)}>
+            <EditRoundedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+  ];
+
+  const handleExportarExcel = async () => {
+    setExportando(true);
+    try {
+      const columnasExportables = columns.filter((c) => !c.disableExport);
+      await exportarExcel({
+        columnas: columnasExportables.map((c) => ({ header: c.headerName, key: c.field })),
+        filas: equipos.map((fila) =>
+          Object.fromEntries(columnasExportables.map((c) => [c.field, obtenerValorExportable(c, fila)]))
+        ),
+        nombreArchivo: 'equipos-tecport',
+        nombreHoja: 'Equipos',
+      });
+    } catch {
+      setError('No se pudo generar el archivo Excel');
+    } finally {
+      setExportando(false);
+    }
+  };
+
   return (
-    <div>
+    <Box>
       <PageHeader
         title="Equipos"
         actions={
-          <button
-            onClick={abrirNuevo}
-            className="rounded-md bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary-dark"
-          >
+          <Button onClick={abrirNuevo} variant="contained" startIcon={<AddRoundedIcon />}>
             Nuevo equipo
-          </button>
+          </Button>
         }
       />
 
-      <div className="mb-4 max-w-xs">
-        <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre..." />
-      </div>
+      <Box sx={{ mb: 2.5, maxWidth: 320 }}>
+        <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre..." fullWidth />
+      </Box>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase text-neutral border-b">
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Descripción</th>
-                <th className="px-4 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-neutral">
-                    Cargando...
-                  </td>
-                </tr>
-              ) : equipos.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-neutral">
-                    No hay equipos registrados.
-                  </td>
-                </tr>
-              ) : (
-                equipos.map((equipo) => (
-                  <tr key={equipo.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium text-primary">{equipo.nombre}</td>
-                    <td className="px-4 py-3">{equipo.descripcion || '—'}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => abrirEditar(equipo)} className="text-primary hover:underline">
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <Card sx={{ height: 520 }}>
+        <DataGrid
+          rows={equipos}
+          columns={columns}
+          loading={cargando}
+          disableRowSelectionOnClick
+          pageSizeOptions={[10, 20, 50]}
+          slots={{ toolbar: ExportGridToolbar }}
+          slotProps={{ toolbar: { onExport: handleExportarExcel, loading: exportando } }}
+          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          sx={{ border: 'none' }}
+        />
       </Card>
 
       <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title={equipoEditar ? 'Editar equipo' : 'Nuevo equipo'}>
@@ -161,10 +190,11 @@ function EquiposPage() {
           key={equipoEditar?.id || 'nuevo'}
           defaultValues={equipoEditar || { nombre: '', descripcion: '' }}
           onSubmit={guardar}
+          onCancel={() => setModalAbierto(false)}
           enviando={enviando}
         />
       </Modal>
-    </div>
+    </Box>
   );
 }
 

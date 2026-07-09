@@ -1,13 +1,34 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid';
+import Typography from '@mui/material/Typography';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import { useTheme } from '@mui/material/styles';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import PersonOffRoundedIcon from '@mui/icons-material/PersonOffRounded';
+import ApartmentRoundedIcon from '@mui/icons-material/ApartmentRounded';
+import PrecisionManufacturingRoundedIcon from '@mui/icons-material/PrecisionManufacturingRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import WarningRoundedIcon from '@mui/icons-material/WarningRounded';
+import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import { obtenerResumen } from '../../services/dashboard';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import Card from '../../components/Card';
 import EstadoCertificacionBadge from '../../components/EstadoCertificacionBadge';
+import SimpleBarChart from '../../components/charts/SimpleBarChart';
+import EstadoCertificacionesPieChart from '../../components/charts/EstadoCertificacionesPieChart';
 import { formatFecha } from '../../utils/format';
 
 function DashboardPage() {
+  const theme = useTheme();
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -23,88 +44,155 @@ function DashboardPage() {
     };
   }, []);
 
-  if (cargando) return <p className="text-sm text-neutral">Cargando dashboard...</p>;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (cargando) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <div>
+    <Box>
       <PageHeader title="Dashboard" subtitle="Resumen general del sistema" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Operadores totales" value={resumen.totalOperadores} />
-        <StatCard label="Operadores activos" value={resumen.operadoresActivos} />
-        <StatCard label="Operadores inactivos" value={resumen.operadoresInactivos} />
-        <StatCard label="Empresas" value={resumen.totalEmpresas} />
-        <StatCard label="Equipos" value={resumen.totalEquipos} />
-        <StatCard label="Certificaciones vigentes" value={resumen.certificacionesVigentes} />
-        <StatCard label="Por vencer (30 días)" value={resumen.certificacionesPorVencer} variant="warning" />
-        <StatCard label="Certificaciones vencidas" value={resumen.certificacionesVencidas} variant="danger" />
-      </div>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Operadores totales" value={resumen.totalOperadores} icon={<GroupsRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Operadores activos" value={resumen.operadoresActivos} icon={<CheckCircleRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Operadores inactivos" value={resumen.operadoresInactivos} icon={<PersonOffRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Empresas" value={resumen.totalEmpresas} icon={<ApartmentRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Equipos" value={resumen.totalEquipos} icon={<PrecisionManufacturingRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard label="Certificaciones vigentes" value={resumen.certificacionesVigentes} icon={<CheckCircleRoundedIcon />} />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard
+            label="Por vencer (30 días)"
+            value={resumen.certificacionesPorVencer}
+            variant="warning"
+            icon={<WarningRoundedIcon />}
+          />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <StatCard
+            label="Certificaciones vencidas"
+            value={resumen.certificacionesVencidas}
+            variant="danger"
+            icon={<CancelRoundedIcon />}
+          />
+        </Grid>
+      </Grid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold text-primary mb-3">Operadores por región</h2>
-          <ul className="space-y-2">
-            {resumen.operadoresPorRegion.map((item) => (
-              <li key={item.region} className="flex justify-between text-sm">
-                <span className="text-neutral">{item.region}</span>
-                <span className="font-medium text-primary">{item.total}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 2 }}>
+              Operadores por región
+            </Typography>
+            {resumen.operadoresPorRegion.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Sin datos todavía.
+              </Typography>
+            ) : (
+              <SimpleBarChart
+                data={resumen.operadoresPorRegion.map((item) => ({ name: item.region, total: item.total }))}
+                dataKey="total"
+                nameKey="name"
+                color={theme.palette.primary.main}
+              />
+            )}
+          </Card>
+        </Grid>
 
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold text-primary mb-3">Operadores por equipo</h2>
-          <ul className="space-y-2">
-            {resumen.operadoresPorEquipo.map((item) => (
-              <li key={item.equipoId} className="flex justify-between text-sm">
-                <span className="text-neutral">{item.equipo}</span>
-                <span className="font-medium text-primary">{item.totalOperadores}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 2 }}>
+              Operadores por equipo
+            </Typography>
+            {resumen.operadoresPorEquipo.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Sin datos todavía.
+              </Typography>
+            ) : (
+              <SimpleBarChart
+                data={resumen.operadoresPorEquipo.map((item) => ({ name: item.equipo, total: item.totalOperadores }))}
+                dataKey="total"
+                nameKey="name"
+                color={theme.palette.primary.main}
+              />
+            )}
+          </Card>
+        </Grid>
 
-      <Card className="p-4">
-        <h2 className="text-sm font-semibold text-primary mb-3">Certificaciones próximas a vencer</h2>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 2 }}>
+              Certificaciones por estado
+            </Typography>
+            <EstadoCertificacionesPieChart
+              data={[
+                { name: 'Vigente', value: resumen.certificacionesVigentes },
+                { name: 'Por vencer', value: resumen.certificacionesPorVencer },
+                { name: 'Vencido', value: resumen.certificacionesVencidas },
+              ]}
+            />
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Card sx={{ p: 3 }}>
+        <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 2 }}>
+          Certificaciones próximas a vencer
+        </Typography>
         {resumen.certificacionesProximasAVencer.length === 0 ? (
-          <p className="text-sm text-neutral">No hay certificaciones por vencer en los próximos 30 días.</p>
+          <Typography variant="body2" color="text.secondary">
+            No hay certificaciones por vencer en los próximos 30 días.
+          </Typography>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-neutral border-b">
-                  <th className="py-2">Operador</th>
-                  <th className="py-2">Equipo</th>
-                  <th className="py-2">Certificación</th>
-                  <th className="py-2">Vence</th>
-                  <th className="py-2">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Operador</TableCell>
+                  <TableCell>Equipo</TableCell>
+                  <TableCell>Certificación</TableCell>
+                  <TableCell>Vence</TableCell>
+                  <TableCell>Estado</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {resumen.certificacionesProximasAVencer.map((cert) => (
-                  <tr key={cert.id} className="border-b last:border-0">
-                    <td className="py-2">
-                      <Link to={`/operadores/${cert.operador.id}`} className="text-primary hover:underline">
+                  <TableRow key={cert.id} hover>
+                    <TableCell>
+                      <Link to={`/operadores/${cert.operador.id}`} style={{ color: 'inherit', fontWeight: 600 }}>
                         {cert.operador.nombreCompleto}
                       </Link>
-                    </td>
-                    <td className="py-2">{cert.equipo.nombre}</td>
-                    <td className="py-2">{cert.nombreCertificacion}</td>
-                    <td className="py-2">{formatFecha(cert.fechaVencimiento)}</td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell>{cert.equipo.nombre}</TableCell>
+                    <TableCell>{cert.nombreCertificacion}</TableCell>
+                    <TableCell>{formatFecha(cert.fechaVencimiento)}</TableCell>
+                    <TableCell>
                       <EstadoCertificacionBadge estado={cert.estado} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </Box>
         )}
       </Card>
-    </div>
+    </Box>
   );
 }
 
