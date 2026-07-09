@@ -5,7 +5,6 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
@@ -22,9 +21,6 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
-import BusinessCenterRoundedIcon from '@mui/icons-material/BusinessCenterRounded';
-import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
 import * as operadoresService from '../../services/operadores';
 import * as equiposService from '../../services/equipos';
 import * as certificacionesService from '../../services/certificaciones';
@@ -37,7 +33,7 @@ import { formatFecha, calcularEdad } from '../../utils/format';
 
 function DatoFila({ label, valor }) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, py: 1.1, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
@@ -48,44 +44,24 @@ function DatoFila({ label, valor }) {
   );
 }
 
-function SeccionCard({ icon, titulo, accion, children }) {
+function SeccionCard({ titulo, accion, children }) {
   return (
-    <Card sx={{ height: '100%', overflow: 'hidden' }}>
+    <Card sx={{ height: '100%', p: 3 }}>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 1.5,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          mb: 2,
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.25}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 30,
-              height: 30,
-              borderRadius: 1,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              '& svg': { fontSize: 18 },
-            }}
-          >
-            {icon}
-          </Box>
-          <Typography variant="subtitle1" fontWeight={700} color="text.primary">
-            {titulo}
-          </Typography>
-        </Stack>
+        <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+          {titulo}
+        </Typography>
         {accion}
       </Box>
-      <Box sx={{ px: 3, py: 1 }}>{children}</Box>
+      {children}
     </Card>
   );
 }
@@ -96,13 +72,6 @@ const NIVEL_COLOR = {
   Avanzado: 'warning',
   Maestro: 'success',
 };
-
-function obtenerIniciales(nombre) {
-  if (!nombre) return '?';
-  const partes = nombre.trim().split(/\s+/);
-  const iniciales = partes.slice(0, 2).map((p) => p[0]);
-  return iniciales.join('').toUpperCase();
-}
 
 function OperadorDetallePage() {
   const { id } = useParams();
@@ -198,38 +167,17 @@ function OperadorDetallePage() {
           mb: 3,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar
-            sx={{
-              width: 56,
-              height: 56,
-              bgcolor: 'primary.main',
-              fontWeight: 700,
-              fontSize: '1.1rem',
-            }}
-          >
-            {obtenerIniciales(operador.nombreCompleto)}
-          </Avatar>
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Typography variant="h5" fontWeight={700} color="text.primary">
-                {operador.nombreCompleto}
-              </Typography>
-              <EstadoOperadorBadge activo={operador.activo} />
-            </Stack>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mt: 0.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                {operador.empresa?.nombre} · {operador.region}
-              </Typography>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={operador.codigoOperador}
-                sx={{ fontFamily: 'monospace', fontWeight: 600, height: 22 }}
-              />
-            </Stack>
-          </Box>
-        </Stack>
+        <Box>
+          <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap">
+            <Typography variant="h5" fontWeight={700} color="text.primary">
+              {operador.nombreCompleto}
+            </Typography>
+            <EstadoOperadorBadge activo={operador.activo} />
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {operador.codigoOperador} · {operador.empresa?.nombre} · {operador.region}
+          </Typography>
+        </Box>
 
         <Stack direction="row" spacing={1.5} flexWrap="wrap">
           <Button
@@ -271,7 +219,7 @@ function OperadorDetallePage() {
 
       <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
         <Grid item xs={12} lg={6}>
-          <SeccionCard icon={<PersonRoundedIcon />} titulo="Datos personales">
+          <SeccionCard titulo="Datos personales">
             <DatoFila label="DNI" valor={operador.dni} />
             <DatoFila label="Fecha de nacimiento" valor={formatFecha(operador.fechaNacimiento)} />
             <DatoFila label="Edad" valor={calcularEdad(operador.fechaNacimiento) ?? '—'} />
@@ -301,7 +249,7 @@ function OperadorDetallePage() {
         </Grid>
 
         <Grid item xs={12} lg={6}>
-          <SeccionCard icon={<BusinessCenterRoundedIcon />} titulo="Datos laborales">
+          <SeccionCard titulo="Datos laborales">
             <DatoFila label="Empresa" valor={operador.empresa?.nombre || '—'} />
             <DatoFila label="Región" valor={operador.region} />
             <DatoFila
@@ -327,14 +275,12 @@ function OperadorDetallePage() {
       </Grid>
 
       <SeccionCard
-        icon={<WorkspacePremiumRoundedIcon />}
         titulo="Certificaciones"
         accion={
           <Button
             onClick={() => setModalCertAbierto(true)}
             variant="contained"
             color="secondary"
-            size="small"
             startIcon={<AddRoundedIcon />}
           >
             Agregar certificación
