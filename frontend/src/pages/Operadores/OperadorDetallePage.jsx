@@ -5,6 +5,10 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
+import Avatar from '@mui/material/Avatar';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Divider from '@mui/material/Divider';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
 import TableBody from '@mui/material/TableBody';
@@ -18,10 +22,12 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import BusinessCenterRoundedIcon from '@mui/icons-material/BusinessCenterRounded';
+import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
 import * as operadoresService from '../../services/operadores';
 import * as equiposService from '../../services/equipos';
 import * as certificacionesService from '../../services/certificaciones';
-import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Modal from '../../components/Modal';
 import EstadoOperadorBadge from '../../components/EstadoOperadorBadge';
@@ -31,15 +37,71 @@ import { formatFecha, calcularEdad } from '../../utils/format';
 
 function DatoFila({ label, valor }) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={600} textAlign="right">
+      <Typography variant="body2" fontWeight={600} color="text.primary" textAlign="right">
         {valor}
       </Typography>
     </Box>
   );
+}
+
+function SeccionCard({ icon, titulo, accion, children }) {
+  return (
+    <Card sx={{ height: '100%', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.25}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 30,
+              height: 30,
+              borderRadius: 1,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              '& svg': { fontSize: 18 },
+            }}
+          >
+            {icon}
+          </Box>
+          <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+            {titulo}
+          </Typography>
+        </Stack>
+        {accion}
+      </Box>
+      <Box sx={{ px: 3, py: 1 }}>{children}</Box>
+    </Card>
+  );
+}
+
+const NIVEL_COLOR = {
+  Principiante: 'default',
+  Intermedio: 'info',
+  Avanzado: 'warning',
+  Maestro: 'success',
+};
+
+function obtenerIniciales(nombre) {
+  if (!nombre) return '?';
+  const partes = nombre.trim().split(/\s+/);
+  const iniciales = partes.slice(0, 2).map((p) => p[0]);
+  return iniciales.join('').toUpperCase();
 }
 
 function OperadorDetallePage() {
@@ -126,42 +188,80 @@ function OperadorDetallePage() {
 
   return (
     <Box>
-      <PageHeader
-        title={operador.nombreCompleto}
-        subtitle={`${operador.empresa?.nombre} · Nivel ${operador.nivel}`}
-        actions={
-          <>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: 'primary.main',
+              fontWeight: 700,
+              fontSize: '1.1rem',
+            }}
+          >
+            {obtenerIniciales(operador.nombreCompleto)}
+          </Avatar>
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Typography variant="h5" fontWeight={700} color="text.primary">
+                {operador.nombreCompleto}
+              </Typography>
+              <EstadoOperadorBadge activo={operador.activo} />
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                {operador.empresa?.nombre} · {operador.region}
+              </Typography>
+              <Chip
+                size="small"
+                variant="outlined"
+                label={operador.codigoOperador}
+                sx={{ fontFamily: 'monospace', fontWeight: 600, height: 22 }}
+              />
+            </Stack>
+          </Box>
+        </Stack>
+
+        <Stack direction="row" spacing={1.5} flexWrap="wrap">
+          <Button
+            component={RouterLink}
+            to={`/operadores/${id}/editar`}
+            variant="outlined"
+            startIcon={<EditRoundedIcon />}
+          >
+            Editar operador
+          </Button>
+          {operador.activo ? (
             <Button
-              component={RouterLink}
-              to={`/operadores/${id}/editar`}
+              onClick={() => setModalDesactivar(true)}
               variant="outlined"
-              startIcon={<EditRoundedIcon />}
+              color="error"
+              startIcon={<BlockRoundedIcon />}
             >
-              Editar operador
+              Desactivar
             </Button>
-            {operador.activo ? (
-              <Button
-                onClick={() => setModalDesactivar(true)}
-                variant="contained"
-                color="error"
-                startIcon={<BlockRoundedIcon />}
-              >
-                Desactivar operador
-              </Button>
-            ) : (
-              <Button
-                onClick={handleReactivar}
-                disabled={accionEnCurso}
-                variant="contained"
-                color="success"
-                startIcon={<CheckCircleRoundedIcon />}
-              >
-                Reactivar operador
-              </Button>
-            )}
-          </>
-        }
-      />
+          ) : (
+            <Button
+              onClick={handleReactivar}
+              disabled={accionEnCurso}
+              variant="contained"
+              color="success"
+              startIcon={<CheckCircleRoundedIcon />}
+            >
+              Reactivar operador
+            </Button>
+          )}
+        </Stack>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -170,12 +270,8 @@ function OperadorDetallePage() {
       )}
 
       <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-        <Grid item xs={12} lg={8}>
-          <Card sx={{ p: 3, height: '100%' }}>
-            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1.5 }}>
-              Datos personales
-            </Typography>
-            <DatoFila label="Código de operador" valor={operador.codigoOperador} />
+        <Grid item xs={12} lg={6}>
+          <SeccionCard icon={<PersonRoundedIcon />} titulo="Datos personales">
             <DatoFila label="DNI" valor={operador.dni} />
             <DatoFila label="Fecha de nacimiento" valor={formatFecha(operador.fechaNacimiento)} />
             <DatoFila label="Edad" valor={calcularEdad(operador.fechaNacimiento) ?? '—'} />
@@ -193,37 +289,47 @@ function OperadorDetallePage() {
                 )
               }
             />
-            <DatoFila label="Región" valor={operador.region} />
-            <DatoFila label="Observaciones" valor={operador.observaciones || '—'} />
-          </Card>
+            <Box sx={{ py: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Observaciones
+              </Typography>
+              <Typography variant="body2" color="text.primary" fontWeight={500}>
+                {operador.observaciones || '—'}
+              </Typography>
+            </Box>
+          </SeccionCard>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
-          <Card sx={{ p: 3, height: '100%' }}>
-            <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1.5 }}>
-              Estado
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                Estado del operador
-              </Typography>
-              <EstadoOperadorBadge activo={operador.activo} />
-            </Box>
+        <Grid item xs={12} lg={6}>
+          <SeccionCard icon={<BusinessCenterRoundedIcon />} titulo="Datos laborales">
+            <DatoFila label="Empresa" valor={operador.empresa?.nombre || '—'} />
+            <DatoFila label="Región" valor={operador.region} />
+            <DatoFila
+              label="Nivel"
+              valor={
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color={NIVEL_COLOR[operador.nivel] || 'default'}
+                  label={operador.nivel}
+                />
+              }
+            />
             {!operador.activo && (
               <>
+                <Divider sx={{ my: 1.5 }} />
                 <DatoFila label="Motivo de inactivación" valor={operador.motivoInactivo} />
                 <DatoFila label="Fecha de inactivación" valor={formatFecha(operador.fechaInactivacion)} />
               </>
             )}
-          </Card>
+          </SeccionCard>
         </Grid>
       </Grid>
 
-      <Card sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="subtitle1" fontWeight={700} color="primary.main">
-            Certificaciones
-          </Typography>
+      <SeccionCard
+        icon={<WorkspacePremiumRoundedIcon />}
+        titulo="Certificaciones"
+        accion={
           <Button
             onClick={() => setModalCertAbierto(true)}
             variant="contained"
@@ -233,30 +339,30 @@ function OperadorDetallePage() {
           >
             Agregar certificación
           </Button>
-        </Box>
-
+        }
+      >
         {operador.certificaciones.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
             Este operador no tiene certificaciones registradas.
           </Typography>
         ) : (
-          <Box sx={{ overflowX: 'auto' }}>
+          <Box sx={{ overflowX: 'auto', mx: -3 }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Equipo</TableCell>
+                  <TableCell sx={{ pl: 3 }}>Equipo</TableCell>
                   <TableCell>Certificación</TableCell>
                   <TableCell>Entidad emisora</TableCell>
                   <TableCell>Emisión</TableCell>
                   <TableCell>Vencimiento</TableCell>
                   <TableCell>Estado</TableCell>
-                  <TableCell>Archivo</TableCell>
+                  <TableCell sx={{ pr: 3 }}>Archivo</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {operador.certificaciones.map((cert) => (
                   <TableRow key={cert.id} hover>
-                    <TableCell>{cert.equipo?.nombre}</TableCell>
+                    <TableCell sx={{ pl: 3 }}>{cert.equipo?.nombre}</TableCell>
                     <TableCell>{cert.nombreCertificacion}</TableCell>
                     <TableCell>{cert.entidadEmisora}</TableCell>
                     <TableCell>{formatFecha(cert.fechaEmision)}</TableCell>
@@ -264,7 +370,7 @@ function OperadorDetallePage() {
                     <TableCell>
                       <EstadoCertificacionBadge estado={cert.estado} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ pr: 3 }}>
                       {cert.archivoUrl ? (
                         <Link href={cert.archivoUrl} target="_blank" rel="noreferrer">
                           Ver
@@ -279,7 +385,7 @@ function OperadorDetallePage() {
             </Table>
           </Box>
         )}
-      </Card>
+      </SeccionCard>
 
       <Modal open={modalCertAbierto} onClose={() => setModalCertAbierto(false)} title="Agregar certificación">
         <CertificacionForm
